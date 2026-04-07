@@ -127,26 +127,32 @@ export default async function JournalPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-//  if (!user) {
-//    return <div className="p-6">Not authenticated</div>;
-//  }
+  const entries: JournalEntry[] = [];
+  let loadError = false;
 
-  const { data: entries, error } = await supabase
-  .from("journal_entries")
-  .select("*")
-  .eq("user_id", user.id)
-  .order("created_at", { ascending: false })
-  .limit(50);
+  if (user) {
+    const { data, error } = await supabase
+      .from("journal_entries")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
 
-  if (error) {
+    if (error) {
+      loadError = true;
+    } else {
+      entries.push(...((data ?? []) as JournalEntry[]));
+    }
+  }
+
+  if (loadError) {
     return <div className="p-6">Failed to load journal entries</div>;
   }
 
-  const groupedEntries = groupEntries((entries ?? []) as JournalEntry[]);
+  const groupedEntries = groupEntries(entries);
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-5 sm:px-6 sm:py-6">
-      {/* Header */}
       <section className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Journal</h1>
@@ -163,8 +169,11 @@ export default async function JournalPage() {
         </Link>
       </section>
 
-      {/* Empty state */}
-      {groupedEntries.length === 0 ? (
+      {!user ? (
+        <section className="rounded-2xl border border-gray-200 bg-white px-5 py-10">
+          <h2 className="text-sm font-medium">Not signed in.</h2>
+        </section>
+      ) : groupedEntries.length === 0 ? (
         <section className="rounded-2xl border border-gray-200 bg-white px-5 py-10">
           <h2 className="text-sm font-medium">No journal entries yet.</h2>
         </section>
@@ -172,14 +181,12 @@ export default async function JournalPage() {
         <div className="space-y-8">
           {groupedEntries.map((group) => (
             <section key={group.label} className="space-y-3">
-              {/* Group Header */}
               <div className="sticky top-0 z-10 -mx-1 bg-white/95 px-1 py-1 backdrop-blur">
                 <h2 className="text-sm font-medium text-gray-500">
                   {group.label}
                 </h2>
               </div>
 
-              {/* Entries */}
               <div className="space-y-3">
                 {group.entries.map((entry) => {
                   const tags = normalizeTags(entry.tags);
@@ -192,20 +199,16 @@ export default async function JournalPage() {
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0 flex-1">
-                          
-                          {/* 🔥 FIXED TITLE */}
                           <div className="text-base font-semibold text-gray-900">
                             {fallbackTitle(entry)}
                           </div>
 
-                          {/* Content preview */}
                           {entry.content && (
                             <div className="mt-1 line-clamp-2 text-sm text-gray-600">
                               {entry.content}
                             </div>
                           )}
 
-                          {/* Tags */}
                           <div className="mt-3 flex flex-wrap gap-2">
                             {entry.category && (
                               <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-700">
@@ -223,13 +226,11 @@ export default async function JournalPage() {
                             ))}
                           </div>
 
-                          {/* Date */}
                           <div className="mt-3 text-xs text-gray-400">
                             {formatEntryDate(entry.created_at)}
                           </div>
                         </div>
 
-                        {/* Privacy */}
                         <div className="shrink-0">
                           <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-700">
                             {entry.privacy_level || "normal"}
