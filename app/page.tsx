@@ -127,9 +127,9 @@ export default async function JournalPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    return <div className="p-6">Not authenticated</div>;
-  }
+//  if (!user) {
+//    return <div className="p-6">Not authenticated</div>;
+//  }
 
   const { data: entries, error } = await supabase
   .from("journal_entries")
