@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function AuthFinishPage() {
+function AuthFinishContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = useMemo(() => createClient(), []);
@@ -66,5 +66,26 @@ export default function AuthFinishPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function AuthFinishPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen flex items-center justify-center px-4 py-12">
+          <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 text-center">
+            <h1 className="text-lg font-semibold text-gray-900">
+              Signing you in...
+            </h1>
+            <p className="mt-2 text-sm text-gray-600">
+              Please wait while we complete your login.
+            </p>
+          </div>
+        </main>
+      }
+    >
+      <AuthFinishContent />
+    </Suspense>
   );
 }
