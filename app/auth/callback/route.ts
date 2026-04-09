@@ -3,18 +3,25 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
-  const url = new URL(request.url);
-  const origin = url.origin;
-  const code = url.searchParams.get("code");
-  const token_hash = url.searchParams.get("token_hash");
-  const type = url.searchParams.get("type");
-  const next = url.searchParams.get("next") ?? "/journal";
+  const requestUrl = new URL(request.url);
+  const code = requestUrl.searchParams.get("code");
+  const next = requestUrl.searchParams.get("next") ?? "/journal";
+
+  if (!code) {
+    return NextResponse.redirect(
+      new URL(
+        `/auth/sign-in?error=${encodeURIComponent("Missing auth code.")}`,
+        requestUrl.origin
+      )
+    );
+  }
 
   const cookieStore = await cookies();
+  const response = NextResponse.redirect(new URL(next, requestUrl.origin));
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
       cookies: {
         getAll() {
@@ -28,47 +35,23 @@ export async function GET(request: Request) {
           }[]
         ) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options);
+            response.cookies.set(name, value, options);
           });
         },
       },
     }
   );
 
-  if (code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
 
-    if (error) {
-      return NextResponse.redirect(
-        `${origin}/auth/sign-in?error=${encodeURIComponent(error.message)}`
-      );
-    }
-
-    return NextResponse.redirect(`${origin}${next}`);
+  if (error) {
+    return NextResponse.redirect(
+      new URL(
+        `/auth/sign-in?error=${encodeURIComponent(error.message)}`,
+        requestUrl.origin
+      )
+    );
   }
 
-  if (token_hash && type) {
-    const { error } = await supabase.auth.verifyOtp({
-      token_hash,
-      type: type as
-        | "signup"
-        | "invite"
-        | "magiclink"
-        | "recovery"
-        | "email_change"
-        | "email",
-    });
-
-    if (error) {
-      return NextResponse.redirect(
-        `${origin}/auth/sign-in?error=${encodeURIComponent(error.message)}`
-      );
-    }
-
-    return NextResponse.redirect(`${origin}${next}`);
-  }
-
-  return NextResponse.redirect(
-    `${origin}/auth/sign-in?error=${encodeURIComponent("Invalid or expired login link.")}`
-  );
+  return response;
 }
