@@ -1,30 +1,30 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 
 export async function signInWithMagicLink(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
-  if (!email.includes("@")) {
+
+  if (!email || !email.includes("@")) {
     redirect(
-      "/auth/sign-in?error=" + encodeURIComponent("Enter a valid email address.")
+      `/auth/sign-in?error=${encodeURIComponent("Please enter a valid email address.")}`
     );
   }
 
   const supabase = await createClient();
-  const origin = (
-    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
-  ).replace(/\/$/, "");
+
+  const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/journal`;
 
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${origin}/auth/callback`,
+      emailRedirectTo: redirectTo,
     },
   });
 
   if (error) {
-    redirect("/auth/sign-in?error=" + encodeURIComponent(error.message));
+    redirect(`/auth/sign-in?error=${encodeURIComponent(error.message)}`);
   }
 
   redirect("/auth/sign-in?check=1");

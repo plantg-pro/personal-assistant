@@ -10,32 +10,19 @@ export default async function SignInPage({
   const check = sp.check === "1";
   const error = sp.error ? decodeURIComponent(sp.error) : null;
 
-  // 🔍 DEBUG LOGS (temporary)
-  console.log("URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
-  console.log(
-    "KEY PREFIX:",
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.slice(0, 20)
-  );
-  console.log(
-    "KEY EXISTS:",
-    !!process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-  );
-
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center space-y-2">
-          <h1 className="text-xl font-medium text-ink tracking-tight">
-            Sign in
-          </h1>
-          <p className="text-sm text-ink-muted leading-relaxed">
+          <h1 className="text-xl font-medium tracking-tight">Sign in</h1>
+          <p className="text-sm leading-relaxed text-gray-600">
             We&apos;ll email you a magic link. No password.
           </p>
         </div>
 
         {check ? (
           <p
-            className="text-sm text-ink-muted text-center rounded-lg bg-white border"
+            className="rounded-lg border bg-white p-3 text-center text-sm text-gray-600"
             role="status"
           >
             Check your inbox for the link to continue.
@@ -44,7 +31,7 @@ export default async function SignInPage({
 
         {error ? (
           <p
-            className="text-sm text-red-700 text-center rounded-lg bg-red-50 border"
+            className="rounded-lg border bg-red-50 p-3 text-center text-sm text-red-700"
             role="alert"
           >
             {error}
@@ -55,7 +42,7 @@ export default async function SignInPage({
           <div>
             <label
               htmlFor="email"
-              className="block text-xs font-medium text-ink-muted uppercase tracking-wide"
+              className="block text-xs font-medium uppercase tracking-wide text-gray-500"
             >
               Email
             </label>
@@ -71,13 +58,13 @@ export default async function SignInPage({
 
           <button
             type="submit"
-            className="w-full bg-black text-white py-2 rounded-md"
+            className="w-full rounded-md bg-black py-2 text-white"
           >
             Send magic link
           </button>
         </form>
 
-        <p className="text-xs text-center text-ink-muted">
+        <p className="text-center text-xs text-gray-500">
           Private to you. <Link href="/">Home</Link>
         </p>
       </div>

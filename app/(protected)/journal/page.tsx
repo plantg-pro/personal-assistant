@@ -1,5 +1,9 @@
 import Link from "next/link";
+import { unstable_noStore as noStore } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 type JournalEntry = {
   id: string;
@@ -28,7 +32,7 @@ function addDays(date: Date, days: number) {
 
 function startOfWeek(date: Date) {
   const day = date.getDay();
-  const diff = day === 0 ? -6 : 1 - day; // Monday start
+  const diff = day === 0 ? -6 : 1 - day;
   return startOfDay(addDays(date, diff));
 }
 
@@ -121,27 +125,37 @@ function normalizeTags(tags: string[] | null) {
 }
 
 export default async function JournalPage() {
+  noStore();
+
   const supabase = await createClient();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    return <div className="p-6">Not authenticated</div>;
+  const entries: JournalEntry[] = [];
+  let loadError = false;
+
+  if (user) {
+    const { data, error } = await supabase
+      .from("journal_entries")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (error) {
+      loadError = true;
+    } else {
+      entries.push(...((data ?? []) as JournalEntry[]));
+    }
   }
 
-  const { data: entries, error } = await supabase
-    .from("journal_entries")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
-
-  if (error) {
+  if (loadError) {
     return <div className="p-6">Failed to load journal entries</div>;
   }
 
-  const groupedEntries = groupEntries((entries ?? []) as JournalEntry[]);
+  const groupedEntries = groupEntries(entries);
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-5 sm:px-6 sm:py-6">
@@ -161,14 +175,13 @@ export default async function JournalPage() {
         </Link>
       </section>
 
-      {groupedEntries.length === 0 ? (
+      {!user ? (
         <section className="rounded-2xl border border-gray-200 bg-white px-5 py-10">
-          <div className="space-y-2">
-            <h2 className="text-sm font-medium">No journal entries yet.</h2>
-            <p className="text-sm leading-6 text-gray-500">
-              Start capturing thoughts, ideas and moments as they happen.
-            </p>
-          </div>
+          <h2 className="text-sm font-medium">Not signed in.</h2>
+        </section>
+      ) : groupedEntries.length === 0 ? (
+        <section className="rounded-2xl border border-gray-200 bg-white px-5 py-10">
+          <h2 className="text-sm font-medium">No journal entries yet.</h2>
         </section>
       ) : (
         <div className="space-y-8">
@@ -192,20 +205,22 @@ export default async function JournalPage() {
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0 flex-1">
-                          <div className="font-medium">{fallbackTitle(entry)}</div>
+                          <div className="text-base font-semibold text-gray-900">
+                            {fallbackTitle(entry)}
+                          </div>
 
-                          {entry.content ? (
+                          {entry.content && (
                             <div className="mt-1 line-clamp-2 text-sm text-gray-600">
                               {entry.content}
                             </div>
-                          ) : null}
+                          )}
 
                           <div className="mt-3 flex flex-wrap gap-2">
-                            {entry.category ? (
+                            {entry.category && (
                               <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-700">
                                 {entry.category}
                               </span>
-                            ) : null}
+                            )}
 
                             {tags.map((tag) => (
                               <span
