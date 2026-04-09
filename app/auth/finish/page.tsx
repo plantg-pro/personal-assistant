@@ -57,7 +57,7 @@ export default function AuthFinishPage() {
         ) : (
           <>
             <h1 className="text-lg font-semibold text-gray-900">
-              Signing you in…
+              Signing you in...
             </h1>
             <p className="mt-2 text-sm text-gray-600">
               Please wait while we complete your login.
