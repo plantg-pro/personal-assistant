@@ -13,11 +13,9 @@ function isAuthPath(pathname: string) {
   return pathname === "/auth/sign-in" || pathname.startsWith("/auth/");
 }
 
-export async function middleware(request: NextRequest) {
+export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
+    request,
   });
 
   const supabase = createServerClient(
@@ -40,9 +38,7 @@ export async function middleware(request: NextRequest) {
           });
 
           response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
+            request,
           });
 
           cookiesToSet.forEach(({ name, value, options }) => {
@@ -57,7 +53,7 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { pathname } = request.nextUrl;
+  const pathname = request.nextUrl.pathname;
 
   if (!user && isProtectedPath(pathname)) {
     const redirectUrl = request.nextUrl.clone();
@@ -75,11 +71,3 @@ export async function middleware(request: NextRequest) {
 
   return response;
 }
-
-export const config = {
-  matcher: [
-    "/journal/:path*",
-    "/memories/:path*",
-    "/auth/:path*",
-  ],
-};
