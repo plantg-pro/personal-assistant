@@ -1,8 +1,9 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { unstable_noStore as noStore } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 type JournalEntry = {
   id: string;
@@ -123,68 +124,36 @@ function normalizeTags(tags: string[] | null) {
   return tags.filter((tag) => typeof tag === "string" && tag.trim().length > 0);
 }
 
-export default function JournalPage() {
-  const supabase = useMemo(() => createClient(), []);
-  const [loading, setLoading] = useState(true);
-  const [isSignedIn, setIsSignedIn] = useState(false);
-  const [entries, setEntries] = useState<JournalEntry[]>([]);
-  const [loadError, setLoadError] = useState(false);
+export default async function JournalPage() {
+  noStore();
 
-  useEffect(() => {
-    let mounted = true;
+  const supabase = await createClient();
 
-    async function loadJournal() {
-      setLoading(true);
-      setLoadError(false);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+  const entries: JournalEntry[] = [];
+  let loadError = false;
 
-      if (!mounted) return;
+  if (user) {
+    const { data, error } = await supabase
+      .from("journal_entries")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
 
-      if (userError || !user) {
-        setIsSignedIn(false);
-        setEntries([]);
-        setLoading(false);
-        return;
-      }
-
-      setIsSignedIn(true);
-
-      const { data, error } = await supabase
-        .from("journal_entries")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(50);
-
-      if (!mounted) return;
-
-      if (error) {
-        setLoadError(true);
-        setEntries([]);
-      } else {
-        setEntries((data ?? []) as JournalEntry[]);
-      }
-
-      setLoading(false);
+    if (error) {
+      loadError = true;
+    } else {
+      entries.push(...((data ?? []) as JournalEntry[]));
     }
+  }
 
-    loadJournal();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
-      loadJournal();
-    });
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, [supabase]);
+  if (loadError) {
+    return <div className="p-6">Failed to load journal entries</div>;
+  }
 
   const groupedEntries = groupEntries(entries);
 
@@ -206,15 +175,7 @@ export default function JournalPage() {
         </Link>
       </section>
 
-      {loading ? (
-        <section className="rounded-2xl border border-gray-200 bg-white px-5 py-10">
-          <h2 className="text-sm font-medium">Loading…</h2>
-        </section>
-      ) : loadError ? (
-        <section className="rounded-2xl border border-gray-200 bg-white px-5 py-10">
-          <h2 className="text-sm font-medium">Failed to load journal entries</h2>
-        </section>
-      ) : !isSignedIn ? (
+      {!user ? (
         <section className="rounded-2xl border border-gray-200 bg-white px-5 py-10">
           <h2 className="text-sm font-medium">Not signed in.</h2>
         </section>
