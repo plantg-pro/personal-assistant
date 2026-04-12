@@ -24,8 +24,7 @@ export async function createClient() {
               cookieStore.set(name, value, options);
             });
           } catch {
-            // Ignore in Server Components.
-            // Cookie writes must happen in Route Handlers or Server Actions.
+            // Ignore cookie writes in Server Components.
           }
         },
       },
