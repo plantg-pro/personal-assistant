@@ -14,13 +14,12 @@ export async function signInWithMagicLink(formData: FormData) {
 
   const supabase = await createClient();
 
-  const redirectTo = "https://aimee-ten.vercel.app/auth/finish?next=/journal";
+  const redirectTo = "https://aimee-ten.vercel.app/auth/callback?next=/journal";
 
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
       emailRedirectTo: redirectTo,
-      shouldCreateUser: false,
     },
   });
 
